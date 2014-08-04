@@ -11,11 +11,11 @@ MAX_DISTANCE  = 50
 #There are some wierd characters "\xef\xbb\xbf" at the begining of the files
 
 trips = {}
-# Read all trips of for a given service type
+# Read all trips of for a given service type, consider just one direction trips
 with open('./google_transit/trips.txt', 'rb') as tripsfile:
     READER = csv.DictReader(tripsfile)
     for row in READER:
-        if(row['service_id']==SERVICE_TYPE):
+        if(row['service_id']==SERVICE_TYPE and row['direction_id'] == '0'):
             trips[row['trip_id']] =row
 
 stop_times = {}
@@ -133,9 +133,6 @@ def find_x_y(s):
 for stop in stops:
     stops_plane[stop] = find_x_y(stops[stop])
 
-#print stops_plane['AF910']
-#print stops_plane['AF920']
-
 #Now use 2D bucket approach to find near neighbour stops
 buckets = {}
 size = round(MAX_DISTANCE/math.sqrt(2))
@@ -149,7 +146,7 @@ def get_bucket_key(s):
     y2 = y1+size
 
     return ((x1,y1),(x2,y2))
-#Put stops in theie respective buckets
+#Put stops in their respective buckets
 for stop in stops:
     key = get_bucket_key(stops[stop])
     if not key in buckets:
@@ -177,4 +174,42 @@ for stop in stops:
     for bucket in get_adjacent_buckets(get_bucket_key(stops[stop])):
         if bucket in buckets:
             nearest_stops[stop].update(buckets[bucket])
+
+
+#Given two datetime.time objects, calculates the difference in minutes
+#Seconds are ignored
+def time_diff(t1,t2):
+    return (t2.hour-t1.hour)*60+(t2.minute-t1.minute)
+
+#Given two routes and a stop, calculates the average connection time.
+#The connection time is the period between route1's  arrival 
+#time and route2's departure time.
+def get_average_connection_time(route1,route2,stop1,stop2):    
+    #Get the number of trips for both routes  
+    num_r1_trips = len(stop_times[stop1][route1])
+    num_r2_trips = len(stop_times[stop2][route2])
+    st_1 = stop_times[stop1][route1]
+    st_2 = stop_times[stop2][route2]
+    #Start with route1's earliest trips and calculate connection time
+    #with the next route2's trip 
+    cur_1 = 0
+    cur_2 = 0
+    total = 0
+    while(cur_1 < num_r1_trips):       
+        #Skip route2's trips that are earlier than route1's next trip
+        while(time_diff(st_2[cur_2]['arrival_time'],st_1[cur_1]['arrival_time'])>0):
+            cur_2+=1            
+            if(cur_2 == num_r2_trips):
+                break
+        if(cur_2 == num_r2_trips):
+            break
+        total+= time_diff(st_1[cur_1]['arrival_time'],st_2[cur_2]['arrival_time'])
+        cur_1+=1   
+    if(cur_1 == 0):
+        return 0
+    return total/cur_1
+
+#print get_average_connection_time('4-162','94-162',"AF930","AF950")
+
+    
 
