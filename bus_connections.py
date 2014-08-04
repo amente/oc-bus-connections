@@ -101,37 +101,39 @@ d12 = find_distance(s1,s2)
 d13 = find_distance(s1,s3)
 d23 = find_distance(s2,s3)
 
-stops_plane['AF910'] = (0,d12) # YAxis
-stops_plane['AA240'] = (0,0) #Origin
-stops_plane['WI550'] = (d23,0) #XAxis
+#Use triangle equations to find the origin and the axes
+d1 = 0.5*(d13+((d12*d12 - d23*d23)/d13))
+d2 = math.sqrt(d12*d12 - d1*d1)
+d3 = d13 - d1
+
+stops_plane['AF910'] = (-1*d1,0) # YAxis
+stops_plane['AA240'] = (0,d2) #Origin
+stops_plane['WI550'] = (d3,0) #XAxis
 
 #Finds the x,y coordinates for a stop on the defined plane
-#Uses basic herons triangle area formula and law of cosines
+#Use law of cosines
 def find_x_y(s):
-    d1 = find_distance(s,s1)
-    d2 = find_distance(s,s2)
-    d3 = find_distance(s,s3)
-    
-    ky = (d2+d3+d23)/2    
-    y = 2*math.sqrt(abs(ky*(ky-d2)*(ky-d3)*(ky-d23)))/d23
-
-    kx = (d2+d1+d12)/2
-    x = 2*math.sqrt(abs(kx*(kx-d2)*(kx-d1)*(kx-d12)))/d12
-
-    #Determine signs
-    if((d1*d1) < (d2*d2+d12*d12)):
-        y= -1*y
-        if(y == -0.0):
-            y = 0.0
-    if((d3*d3) < (d2*d2+d23*d23)):
-        x= -1*x
-        if(x==-0.0):
-            x = 0.0
+    ds2 = find_distance(s,s2)
+    ds3 = find_distance(s,s3)        
+    costheta = (d23*d23+ds3*ds3 - ds2*ds2)/(2*d23*ds3)    
+    #Rounding errors may cause this
+    if(costheta > 1):        
+        costheta = 1
+    if(costheta < -1):        
+        costheta = -1    
+    alpha = math.acos(d3/d23)
+    thetha = math.acos(costheta)
+    x= d3 - ds3*math.cos(alpha+thetha)
+    rsquare = d3*d3 + ds3*ds3 - 2*d3*ds3*math.cos(alpha+thetha)
+    y = math.sqrt(rsquare-x*x)
+    if(alpha+thetha > math.pi):
+        y = -1*y
     return (x,y)
 
 #Calculate coordinates of all stops
 for stop in stops:
-    stops_plane[stop] = find_x_y(stops[stop])
+    if not stop in stops_plane:
+        stops_plane[stop] = find_x_y(stops[stop])
 
 #Now use 2D bucket approach to find near neighbour stops
 buckets = {}
@@ -175,7 +177,6 @@ for stop in stops:
         if bucket in buckets:
             nearest_stops[stop].update(buckets[bucket])
 
-
 #Given two datetime.time objects, calculates the difference in minutes
 #Seconds are ignored
 def time_diff(t1,t2):
@@ -210,6 +211,7 @@ def get_average_connection_time(route1,route2,stop1,stop2):
     return total/cur_1
 
 #print get_average_connection_time('4-162','94-162',"AF930","AF950")
-
+#for stop in nearest_stops['EB420']:
+#    print stop
     
 
