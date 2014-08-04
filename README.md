@@ -6,4 +6,5 @@ A work to find the average connection wait time for OC Transpo bus schedule. And
 The OC Transpo schedule data can be downloaded from
 http://data.ottawa.ca/en/dataset/oc-transpo-schedules
 
+Disclaimer: Not affliated with OC Transpo
 

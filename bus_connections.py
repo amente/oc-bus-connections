@@ -138,7 +138,6 @@ for stop in stops:
 #Now use 2D bucket approach to find near neighbour stops
 buckets = {}
 size = round(MAX_DISTANCE/math.sqrt(2))
-print size
 def get_bucket_key(s):
     xdelta = stops_plane[s['\xef\xbb\xbfstop_id']][0]%(size)
     ydelta = stops_plane[s['\xef\xbb\xbfstop_id']][1]%(size) 
@@ -186,11 +185,11 @@ def time_diff(t1,t2):
 #The connection time is the period between route1's  arrival 
 #time and route2's departure time.
 def get_average_connection_time(route1,route2,stop1,stop2):    
-    #Get the number of trips for both routes  
-    num_r1_trips = len(stop_times[stop1][route1])
-    num_r2_trips = len(stop_times[stop2][route2])
+    #Get the number of trips for both routes      
     st_1 = stop_times[stop1][route1]
     st_2 = stop_times[stop2][route2]
+    num_r1_trips = len(st_1)
+    num_r2_trips = len(st_2)
     #Start with route1's earliest trips and calculate connection time
     #with the next route2's trip 
     cur_1 = 0
@@ -198,6 +197,8 @@ def get_average_connection_time(route1,route2,stop1,stop2):
     total = 0
     while(cur_1 < num_r1_trips):       
         #Skip route2's trips that are earlier than route1's next trip
+        if(cur_2 == num_r2_trips):
+            break
         while(time_diff(st_2[cur_2]['arrival_time'],st_1[cur_1]['arrival_time'])>0):
             cur_2+=1            
             if(cur_2 == num_r2_trips):
@@ -213,5 +214,18 @@ def get_average_connection_time(route1,route2,stop1,stop2):
 #print get_average_connection_time('4-162','94-162',"AF930","AF950")
 #for stop in nearest_stops['EB420']:
 #    print stop
-    
 
+#Now finally calculate the averrage connection time for all possible connections
+# Between a route at a given stop and other routes at the nearest stops  
+num_connections = 0
+total = 0
+for stop in stop_times:
+    for route1 in stop_times[stop]:
+        for nearest_stop in nearest_stops[stop]:
+            if nearest_stop in stop_times:
+                for route2 in stop_times[nearest_stop]:
+                    num_connections+=1
+                    total+=get_average_connection_time(route1,route2,stop,nearest_stop)
+
+print "Total:",total, " num_connections:",num_connections
+print "Average conneciton time:",total/num_connections,'minutes'
